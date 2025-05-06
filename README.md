@@ -27,3 +27,20 @@ Scikit-learn (TF-IDF + cosine similarity)
 MySQL for database storage
 
 NLTK for text preprocessing
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Software Development Project
+Author : Md. Shojib Sheikh
+
