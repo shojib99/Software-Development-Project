@@ -1,0 +1,205 @@
+import streamlit as st
+import nltk
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+from transformers import pipeline
+from PIL import Image
+import pytesseract
+import matplotlib.pyplot as plt
+import pandas as pd
+import mysql.connector
+import os
+
+# Download necessary NLTK data
+nltk.download('punkt')
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+# Configure pytesseract
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Update this path as needed
+
+# Initialize AI detection model
+try:
+    ai_detector = pipeline("text-classification", model="roberta-base-openai-detector")
+except Exception as e:
+    st.error(f"Error loading AI detection model: {e}. Trying another model...")
+    try:
+        ai_detector = pipeline("text-classification", model="distilbert-base-uncased-finetuned-sst-2-english")
+    except Exception as e2:
+        st.error(f"Error loading fallback model: {e2}. AI detection may not be available.")
+        ai_detector = None
+
+# OCR function to extract text from images
+def extract_text_from_image(image):
+    try:
+        text = pytesseract.image_to_string(image)
+        return text
+    except Exception as e:
+        st.error(f"Error extracting text from the image: {e}")
+        return ""
+
+# Plagiarism detection using cosine similarity
+def detect_plagiarism(text1, text2):
+    vectorizer = TfidfVectorizer()
+    vectors = vectorizer.fit_transform([text1, text2])
+    similarity = cosine_similarity(vectors)[0][1]
+    return similarity
+
+# AI-generated content detection
+def detect_ai_generated(text):
+    if ai_detector:
+        try:
+            result = ai_detector(text)
+            label = result[0]['label']
+            score = result[0]['score']
+            return label, score
+        except Exception as e:
+            st.error(f"Error during AI detection: {e}")
+            return "Error", 0.0
+    else:
+        return "Not Available", 0.0
+
+# Database connection details
+db_name = "real_cat_db"
+db_user = "root"
+db_password = ""
+db_host = "localhost"
+
+# Save analysis history to the database
+def save_history(history):
+    try:
+        connection = mysql.connector.connect(
+            database=db_name, user=db_user, password=db_password, host=db_host
+        )
+        cursor = connection.cursor()
+        cursor.execute(
+            """CREATE TABLE IF NOT EXISTS analysis_history (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                input_text TEXT,
+                plagiarism_score FLOAT,
+                ai_label VARCHAR(255),
+                ai_score FLOAT,
+                human_written_score FLOAT
+            )"""
+        )
+        for analysis in history:
+            cursor.execute(
+                """INSERT INTO analysis_history (input_text, plagiarism_score, ai_label, ai_score, human_written_score) 
+                   VALUES (%s, %s, %s, %s, %s)""",
+                (analysis["input_text"], analysis["plagiarism_score"], analysis["ai_label"], analysis["ai_score"], analysis["human_written_score"]),
+            )
+        connection.commit()
+        cursor.close()
+        connection.close()
+    except mysql.connector.Error as err:
+        st.error(f"Error connecting to MySQL database: {err}")
+
+# Load history from the database
+def load_history():
+    try:
+        connection = mysql.connector.connect(
+            database=db_name, user=db_user, password=db_password, host=db_host
+        )
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM analysis_history")
+        history = cursor.fetchall()
+        connection.close()
+
+        formatted_history = []
+        for row in history:
+            formatted_history.append({
+                "input_text": row[1],
+                "plagiarism_score": row[2],
+                "ai_label": row[3],
+                "ai_score": row[4],
+                "human_written_score": row[5]
+            })
+        return formatted_history
+    except mysql.connector.Error as err:
+        st.error(f"Error loading history from MySQL database: {err}")
+        return []
+
+# Load history
+history = load_history()
+
+# Streamlit app layout
+st.set_page_config(page_title="Real Cat", page_icon=":cat:", layout="wide")
+st.title("Real Cat - An AI-powered Plagiarism Detector")
+
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    text_input = st.text_area("Enter text to analyze", height=300)
+
+with col2:
+    uploaded_file = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
+
+if st.button("Analyze"):
+    if text_input or uploaded_file:
+        if uploaded_file:
+            try:
+                # Open the uploaded image and extract text
+                image = Image.open(uploaded_file)
+                extracted_text = extract_text_from_image(image)
+                st.write("Extracted Text from Image:")
+                st.write(extracted_text)
+                text_input = extracted_text  # Use extracted text for analysis
+            except Exception as e:
+                st.error(f"Failed to process the image: {e}")
+
+        if text_input:
+            comparison_text = "This is a comparison text for plagiarism detection."  # Replace with real comparison text
+            plagiarism_score = detect_plagiarism(text_input, comparison_text)
+            ai_label, ai_score = detect_ai_generated(text_input)
+
+            human_written_score = 1 - max(plagiarism_score, ai_score)
+
+            current_analysis = {
+                "input_text": text_input,
+                "plagiarism_score": plagiarism_score,
+                "ai_label": ai_label,
+                "ai_score": ai_score,
+                "human_written_score": human_written_score
+            }
+            history.append(current_analysis)
+            save_history(history)
+
+            st.subheader("Analysis Results")
+            col3, col4 = st.columns(2)
+
+            with col3:
+                st.metric("Plagiarism Score", f"{plagiarism_score*100:.2f}%")
+                st.metric("AI Generated Confidence", f"{ai_score*100:.2f}%")
+                st.metric("Human Written Confidence", f"{human_written_score*100:.2f}%")
+                chart_data = {'Metric': ['Plagiarism', 'AI Generated', 'Human Written'], 
+                              'Percentage': [plagiarism_score*100, ai_score*100, human_written_score*100]}
+                df = pd.DataFrame(chart_data)
+                fig, ax = plt.subplots()
+                ax.bar(df['Metric'], df['Percentage'], color=['red', 'green', 'blue'])
+                ax.set_ylabel('Percentage')
+                ax.set_title('Analysis Breakdown')
+                st.pyplot(fig)
+
+            with col4:
+                st.write(f"AI Generated Label: {ai_label}")
+                if plagiarism_score > 0.5:
+                    st.warning("High plagiarism detected.")
+                if ai_label == "LABEL_1" or ai_score > 0.7:
+                    st.error("High probability of AI-generated content.")
+                elif human_written_score > 0.7:
+                    st.success("High probability of Human-written content.")
+    else:
+        st.error("Please provide text input or upload an image.")
+
+# Display history
+st.subheader("Analysis History")
+if history:
+    for i, analysis in enumerate(history):
+        st.write(f"Analysis {i+1}:")
+        st.write(f"Input Text: {analysis['input_text'][:100]}...")
+        st.write(f"Plagiarism Score: {analysis['plagiarism_score']*100:.2f}%")
+        st.write(f"AI Generated: {analysis['ai_label']} ({analysis['ai_score']*100:.2f}%)")
+        st.write(f"Human Written: {analysis['human_written_score']*100:.2f}%")
+        st.write("---")
+else:
+    st.write("No analysis history yet.")
