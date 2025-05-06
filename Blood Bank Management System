@@ -1,0 +1,297 @@
+#include<bits/stdc++.h>
+using namespace std;
+
+void doner();
+void patitent();
+void admin();
+void exit();
+
+class doner_c {
+public:
+    string name;
+    string sex;
+    int age;
+    int packet;
+    string blood_group;
+    int day, month, year;
+};
+
+int main() {
+
+     int choice;
+    cout << " \t\t Blood Bank Management System \n";
+    //cout << "  \t\t-------------------------\n";
+    cout << "  \t\t~~~~~~~~~~~~~~~~~~~~~~~~~~\n\n\n";
+    cout << " |-------------------------------------------|\n";
+    cout << " | Enter 1 for doner                         |\n";
+    cout << " | Enter 2 for patitent:                     |\n";
+    cout << " | Enter 3 for admin:                        |\n";
+    cout << " | Enter 4 for exit                          |\n";
+    cout << " |-------------------------------------------|\n";
+    cout << "\n\n";
+    cout << " |----------------------------------|\n";
+    //cout << " |                                 |\n";
+    cout << " |       Enter your choice:         |\n";
+    //cout << " |                                 |\n";
+    cout << " |----------------------------------|\n";
+     cin >> choice;
+
+    // int choice;
+    // cin >> choice;
+
+    switch (choice)
+    {
+    case 1:
+        doner();
+        break;
+    case 2:
+        patitent();
+        break;
+    case 3:
+        admin();
+        break;
+    case 4:
+        exit();
+        break;
+
+    default:
+        cout << "Enter value of 1-4\n";
+        main();
+    }
+    return 0;
+
+}
+
+void doner() {
+    doner_c person;
+    string name;
+    string sex;
+    int age;
+    string blood;
+    int date, day, month, year;
+    // int packet;
+    cout << "Enter your name: " << endl;
+    cin.ignore();
+    getline(cin, name);
+    person.name = name;
+    // cin.ignore();
+    cout << "Enter your sex: " << endl;
+    // getline(cin, sex);
+    // cin.ignore();
+    cin >> sex;
+    person.sex = sex;
+    cout << "Enter you age: " << endl;
+    cin >> age;
+    person.age = age;
+    cout << "Date(DD MM YYYY):";
+    cin >> day;
+    person.day = day;
+
+    cin >> month;
+    person.month = month;
+    cin >> year;
+    person.year = year;
+
+
+
+    cout << "Blood Group ( Capital letter ): ";
+    cin >> blood;
+    person.blood_group = blood;
+
+
+
+    // file
+    ofstream myFile("info.txt", ios::app);
+    myFile << person.name << " " << person.sex << " " << person.age << " " << person.blood_group << endl;
+
+
+    ofstream bloodFile("blood.txt", ios::app);
+
+    if (blood == "O+") {
+        bloodFile << 'a';
+    }
+    else if (blood == "A+") {
+        bloodFile << 'b';
+    }
+    else if (blood == "B+") {
+        bloodFile << 'c';
+    }
+    else if (blood == "AB+") {
+        bloodFile << 'd';
+    }
+    else if (blood == "O-") {
+        bloodFile << 'e';
+    }
+    else if (blood == "A-") {
+        bloodFile << 'f';
+    }
+    else if (blood == "B-") {
+        bloodFile << 'g';
+    }
+    else if (blood == "AB-") {
+        bloodFile << 'h';
+    }
+
+    bloodFile.close();
+    myFile.close();
+    char c;
+    cout <<"Do you want your information to be displayed now(Y/N):";
+
+        cin >> c;
+        if (c == 'Y' || c == 'y') {
+            cout << "\t\t\t Donation slip" << endl;
+            cout << "\t\t\t~~~~~~~~~~~~~~~" << endl;
+            cout << "Name :" << name << endl;
+            cout << "Sex  :" << sex << endl;
+            cout << "Age  :" << age << endl;
+            cout << "Group:" << blood << endl;
+            cout << "Date :" << day << " " << month << " " << year << endl;
+            cout << endl << endl << "Thanks for donate blood\n";
+            cout << endl << endl;
+            cout << "\t\t\t\t Shojib\n";
+            cout << "\t\t\t\t------------\n";
+            cout << "\t\t\t\t signature\n";
+            cout << endl << endl;
+
+
+
+            main();
+        }
+        else
+            cout << endl << endl << "Thanks for donate blood" << endl;
+
+}
+
+
+void patitent() {
+    // File Read
+    string blood_name;
+    ifstream bloodFile("blood.txt");
+    bloodFile >> blood_name;
+
+    multiset<char> ms;
+    for (auto x : blood_name) {
+        ms.insert(x);
+    }
+    cout << "Which blood group you need( Capital letter ): ";
+    string b_n;
+    cin >> b_n;
+    char ch;
+    if (b_n == "O+") {
+        ch = 'a';
+    }
+    else if (b_n == "A+") {
+        ch = 'b';
+    }
+    else if (b_n == "B+") {
+        ch = 'c';
+    }
+    else if (b_n == "AB+") {
+        ch = 'd';
+    }
+    else if (b_n == "O-") {
+        ch = 'e';
+    }
+    else if (b_n == "A-") {
+        ch = 'f';
+    }
+    else if (b_n == "B-") {
+        ch = 'g';
+    }
+    else if (b_n == "AB-") {
+        ch == 'h';
+    }
+
+    if (ms.find(ch) == ms.end()) {
+        cout << "This blood is not available" << endl;
+    }
+    else {
+        cout << "This blood is available" << endl;
+        ms.erase(ms.find(ch));
+        ofstream newbloodFile("blood.txt", ios::out);
+        for (auto x : ms) {
+            newbloodFile << x;
+        }
+        newbloodFile.close();
+    }
+    // File Reading close ( Blood Found )
+
+    bloodFile.close();
+    main();
+}
+
+void exit() {
+    main();
+}
+void admin() {
+    char s[20] = "Shojib";
+    char str[20];
+    cout << "Enter password:";
+    cin >> str;
+    if (strcmp(s, str) == 0)
+    {
+        cout << "welcome!!!" << endl;
+        cout << "\t\t\tAdmin Area\n";
+        cout << "\t\t\t----------" << endl;
+
+        ifstream myFile("info.txt");
+        string name, sex, age, blood,day,month,year;
+        cout << "Name\t\tSex\t\tAge\t\tGroup\t\tDate" << endl;
+        cout << "----\t\t---\t\t---\t\t-----\t\t-----" << endl;
+        while (myFile >> name >> sex >> age >> blood>>day>>month>>year) {
+            cout << name << "\t\t" << sex << "\t\t" << age << "\t\t" << blood <<"\t\t"<<day<<month<<year<< endl;
+        }
+        cout << endl << endl;
+        cout << "Blood Details\n";
+        cout << "-------------" << endl;
+        ifstream ourFile("blood.txt");
+        string all_blood;
+        ourFile >> all_blood;
+
+        int c_a, c_b, c_c, c_d, c_e, c_f, c_g, c_h;
+        c_a = c_b = c_c = c_d = c_e = c_f = c_g = c_h = 0;
+
+        for (char x : all_blood) {
+            if (x == 'a') {
+                c_a++;
+            }
+            else if (x == 'b') {
+                c_b++;
+            }
+            else if (x == 'c') {
+                c_c++;
+            }
+            else if (x == 'd') {
+                c_d++;
+            }
+            else if (x == 'e') {
+                c_e++;
+            }
+            else if (x == 'f') {
+                c_f++;
+            }
+            else if (x == 'g') {
+                c_g++;
+            }
+            else if (x == 'h') {
+                c_h++;
+            }
+        }
+
+        cout << "O+     : " << c_a << endl;
+        cout << "A+     : " << c_b << endl;
+        cout << "B+     : " << c_c << endl;
+        cout << "AB+    : " << c_d << endl;
+        cout << "O-     : " << c_e << endl;
+        cout << "A-     : " << c_f << endl;
+        cout << "B-     : " << c_g << endl;
+        cout << "AB-    : " << c_h << endl;
+        main();
+
+    }
+    else
+        cout << "Please contact Shojib to become an admin" << endl;
+    main();
+
+
+}
